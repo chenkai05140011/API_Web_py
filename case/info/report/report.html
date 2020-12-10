@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 12px;
+	/* do not increase min-width as some may use split screens */
+	min-width: 800px;
+	color: #999;
+}
+
+h1 {
+	font-size: 24px;
+	color: black;
+}
+
+h2 {
+	font-size: 16px;
+	color: black;
+}
+
+p {
+    color: black;
+}
+
+a {
+	color: #999;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+
+#environment td {
+	padding: 5px;
+	border: 1px solid #E6E6E6;
+}
+
+#environment tr:nth-child(odd) {
+	background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed, .passed .col-result {
+	color: green;
+}
+span.skipped, span.xfailed, span.rerun, .skipped .col-result, .xfailed .col-result, .rerun .col-result {
+	color: orange;
+}
+span.error, span.failed, span.xpassed, .error .col-result, .failed .col-result, .xpassed .col-result  {
+	color: red;
+}
+
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+
+#results-table {
+	border: 1px solid #e6e6e6;
+	color: #999;
+	font-size: 12px;
+	width: 100%
+}
+
+#results-table th, #results-table td {
+	padding: 5px;
+	border: 1px solid #E6E6E6;
+	text-align: left
+}
+#results-table th {
+	font-weight: bold
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+
+.log:only-child {
+	height: inherit
+}
+.log {
+	background-color: #e6e6e6;
+	border: 1px solid #e6e6e6;
+	color: black;
+	display: block;
+	font-family: "Courier New", Courier, monospace;
+	height: 230px;
+	overflow-y: scroll;
+	padding: 5px;
+	white-space: pre-wrap
+}
+div.image {
+	border: 1px solid #e6e6e6;
+	float: right;
+	height: 240px;
+	margin-left: 5px;
+	overflow: hidden;
+	width: 320px
+}
+div.image img {
+	width: 320px
+}
+div.video {
+	border: 1px solid #e6e6e6;
+	float: right;
+	height: 240px;
+	margin-left: 5px;
+	overflow: hidden;
+	width: 320px
+}
+div.video video {
+	overflow: hidden;
+	width: 320px;
+    height: 240px;
+}
+.collapsed {
+	display: none;
+}
+.expander::after {
+	content: " (show details)";
+	color: #BBB;
+	font-style: italic;
+	cursor: pointer;
+}
+.collapser::after {
+	content: " (hide details)";
+	color: #BBB;
+	font-style: italic;
+	cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+	cursor: pointer;
+}
+
+.sort-icon {
+	font-size: 0px;
+	float: left;
+	margin-right: 5px;
+	margin-top: 5px;
+	/*triangle*/
+	width: 0;
+	height: 0;
+	border-left: 8px solid transparent;
+	border-right: 8px solid transparent;
+}
+
+.inactive .sort-icon {
+	/*finish triangle*/
+	border-top: 8px solid #E6E6E6;
+}
+
+.asc.active .sort-icon {
+	/*finish triangle*/
+	border-bottom: 8px solid #999;
+}
+
+.desc.active .sort-icon {
+	/*finish triangle*/
+	border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (extras.classList.contains("collapsed")) {
+            expandcollapse.classList.add("expander")
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    sort_column(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+
+        if (key_a == key_b) return 0;
+
+        if (reversed) {
+            return (key_a < key_b ? 1 : -1);
+        } else {
+            return (key_a > key_b ? 1 : -1);
+        }
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 09-Dec-2020 at 17:23:45 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v2.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>JAVA_HOME</td>
+        <td>C:\Program Files\Java\jdk1.8.0_131</td></tr>
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.9.0", "pytest": "6.0.2"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.19041-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"allure-pytest": "2.8.18", "html": "2.1.1", "metadata": "1.10.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.8</td></tr></table>
+    <h2>Summary</h2>
+    <p>1 tests ran in 21.17 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">0 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">1 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">case/info/test_OrgEntity.py::test_cs001_jgl</td>
+          <td class="col-duration">20.79</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">login_fix = &lt;requests.sessions.Session object at 0x000002BF6CC965F8&gt;<br/><br/>    @pytest.mark.api_test<br/>    @allure.story(&quot;添加主体-查询主体-移除主体&quot;)<br/>    def test_cs001_jgl(login_fix):<br/>        &#x27;&#x27;&#x27;<br/>        用例描述：添加主体-查询主体-—移除主体<br/>        :param login_fix:前置登入<br/>        :return:<br/>        &#x27;&#x27;&#x27;<br/>        s = login_fix<br/>        re = Org_Entity(s)<br/>        # step1 执行查询<br/>        data = re.select_zh_org_entity(orgEntityName=&quot;跃驰&quot;, avaliable=1)#1可认领<br/>        assert data[&quot;code&quot;] == 200<br/>        print(data)<br/>        # 组合依赖数据<br/>        pripid_1 = data[&quot;data&quot;][&quot;data&quot;][0][&quot;pripid&quot;]<br/>        pripid = []<br/>        pripid.append(pripid_1)<br/>        # step2 执行移除接口<br/>        data_1 = re.add_org_entity(pripid)<br/>        print(data_1)<br/>        assert data_1[&#x27;message&#x27;] == &quot;批量加入管辖成功&quot;<br/>        orgEntityName = data[&quot;data&quot;][&quot;data&quot;][0][&quot;orgEntityName&quot;]<br/>        print(orgEntityName)<br/>        time.sleep(20)<br/>        data_2 = re.select_org_entity(orgEntityName=orgEntityName, regState=1)<br/>        print(data_2)<br/>        assert data_2[&#x27;data&#x27;][&#x27;data&#x27;][0][&#x27;pripid&#x27;] in pripid<br/>        # step指派<br/>        uid = data_2[&#x27;data&#x27;][&#x27;data&#x27;][0][&#x27;uid&#x27;]<br/>        uid_list = []<br/>        uid_list.append(uid)<br/>        manageCode = data_2[&#x27;data&#x27;][&#x27;data&#x27;][0][&#x27;manageCode&#x27;]<br/>        manageType = data_2[&#x27;data&#x27;][&#x27;data&#x27;][0][&#x27;manageType&#x27;]<br/>        data_assign = re.assign_org_entity(uid=uid_list,  manageCode=manageCode, manageType=manageType)<br/>&gt;       assert data_assign == &quot;批量指派成功:1条,失败:0条&quot;<br/><span class="error">E       AssertionError: assert {&#x27;code&#x27;: 200, &#x27;data&#x27;: None, &#x27;errors&#x27;: [], &#x27;message&#x27;: &#x27;批量指派成功:1条,失败:0条&#x27;} == &#x27;批量指派成功:1条,失败:0条&#x27;</span><br/><br/>test_OrgEntity.py:183: AssertionError<br/> -----------------------------Captured stdout setup------------------------------ <br/>当前用例运行测试环境：http://59.202.63.108:80
+<br/> ------------------------------Captured stdout call------------------------------ <br/>{&#x27;code&#x27;: 200, &#x27;message&#x27;: &#x27;&#x27;, &#x27;errors&#x27;: [], &#x27;data&#x27;: {&#x27;total&#x27;: 8, &#x27;pages&#x27;: 1, &#x27;data&#x27;: [{&#x27;pripid&#x27;: &#x27;3303823090227938&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;乐清市柳市跃驰轮胎商行&#x27;, &#x27;unicode&#x27;: &#x27;92330382MA294TWH2H&#x27;, &#x27;regno&#x27;: &#x27;330382606344727&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;92&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省温州市乐清市柳市镇排岩头村&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;330300000000&#x27;, &#x27;areaCode&#x27;: &#x27;330382000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;温州市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;乐清市&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;周瑶&#x27;, &#x27;estDate&#x27;: &#x27;2017-03-30&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;温州市&#x27;, &#x27;areaName&#x27;: &#x27;乐清市&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}, {&#x27;pripid&#x27;: &#x27;3310010000050042&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;台州市跃驰汽配有限公司&#x27;, &#x27;unicode&#x27;: &#x27;91331001MA2AKL532H&#x27;, &#x27;regno&#x27;: &#x27;331001000025360&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;91&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省台州市椒江区纬二路158号&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;331000000000&#x27;, &#x27;areaCode&#x27;: &#x27;331002000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;台州市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;椒江区&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;王林军&#x27;, &#x27;estDate&#x27;: &#x27;2017-10-18&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;台州市&#x27;, &#x27;areaName&#x27;: &#x27;椒江区&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}, {&#x27;pripid&#x27;: &#x27;3304020000132208&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;跃驰（嘉兴）信息科技有限公司&#x27;, &#x27;unicode&#x27;: &#x27;91330402MA29GF7D8J&#x27;, &#x27;regno&#x27;: &#x27;330402000295881&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;91&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省嘉兴市南湖区文贤路134号1幢212室&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;330400000000&#x27;, &#x27;areaCode&#x27;: &#x27;330402000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;嘉兴市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;南湖区&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;易荣华&#x27;, &#x27;estDate&#x27;: &#x27;2017-07-12&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;嘉兴市&#x27;, &#x27;areaName&#x27;: &#x27;南湖区&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}, {&#x27;pripid&#x27;: &#x27;3308810001183675&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;江山跃驰汽车维修有限公司&#x27;, &#x27;unicode&#x27;: &#x27;91330881MA2DH3XT0H&#x27;, &#x27;regno&#x27;: &#x27;330881000123357&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;91&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省衢州市江山市虎山街道虎山路301-1号&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;330800000000&#x27;, &#x27;areaCode&#x27;: &#x27;330881000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;衢州市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;江山市&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;严建波&#x27;, &#x27;estDate&#x27;: &#x27;2019-07-12&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;衢州市&#x27;, &#x27;areaName&#x27;: &#x27;江山市&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}, {&#x27;pripid&#x27;: &#x27;3305230000331026&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;安吉跃驰汽车租赁有限公司&#x27;, &#x27;unicode&#x27;: &#x27;91330523MA2B7H2M8Y&#x27;, &#x27;regno&#x27;: &#x27;330523000212046&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;91&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省湖州市安吉县递铺街道吉庆桥村综合大楼406室（吉庆桥村股份经济合作社房屋）&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;330500000000&#x27;, &#x27;areaCode&#x27;: &#x27;330523000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;湖州市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;安吉县&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;郑杰柱&#x27;, &#x27;estDate&#x27;: &#x27;2019-09-17&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;湖州市&#x27;, &#x27;areaName&#x27;: &#x27;安吉县&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}, {&#x27;pripid&#x27;: &#x27;3310823000287003&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;临海市跃驰汽车美容服务部&#x27;, &#x27;unicode&#x27;: &#x27;92331082MA2DTUPT9W&#x27;, &#x27;regno&#x27;: &#x27;331082650075626&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;92&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省台州市临海市沿江镇西岑村4-237号&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;331000000000&#x27;, &#x27;areaCode&#x27;: &#x27;331082000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;台州市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;临海市&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;王绿萍&#x27;, &#x27;estDate&#x27;: &#x27;2019-03-06&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;台州市&#x27;, &#x27;areaName&#x27;: &#x27;临海市&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}, {&#x27;pripid&#x27;: &#x27;3304213000260383&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;嘉善县惠民街道跃驰建筑工程队&#x27;, &#x27;unicode&#x27;: &#x27;92330421MA2CWTXJ0D&#x27;, &#x27;regno&#x27;: &#x27;330421650039379&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;92&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省嘉兴市嘉善县惠民街道曙光村曙光小区498号二楼东南间&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;330400000000&#x27;, &#x27;areaCode&#x27;: &#x27;330421000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;嘉兴市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;嘉善县&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;金滔&#x27;, &#x27;estDate&#x27;: &#x27;2019-08-15&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;嘉兴市&#x27;, &#x27;areaName&#x27;: &#x27;嘉善县&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}, {&#x27;pripid&#x27;: &#x27;3301043001191171&#x27;, &#x27;alias&#x27;: None, &#x27;orgEntityName&#x27;: &#x27;杭州市江干区跃驰广告设计工作室&#x27;, &#x27;unicode&#x27;: &#x27;92330104MA2CDA1491&#x27;, &#x27;regno&#x27;: &#x27;330104600905917&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityCategory&#x27;: &#x27;92&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省杭州市江干区闸弄口街道沁园雅舍生活馆1116室&#x27;, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;330100000000&#x27;, &#x27;areaCode&#x27;: &#x27;330104000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;manageCodeContent&#x27;: None, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;杭州市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;江干区&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;leRep&#x27;: &#x27;余坤坤&#x27;, &#x27;estDate&#x27;: &#x27;2018-07-23&#x27;, &#x27;status&#x27;: &#x27;1&#x27;, &#x27;cityName&#x27;: &#x27;杭州市&#x27;, &#x27;areaName&#x27;: &#x27;江干区&#x27;, &#x27;townName&#x27;: None, &#x27;distance&#x27;: None}]}}
+{&#x27;code&#x27;: 200, &#x27;message&#x27;: &#x27;批量加入管辖成功&#x27;, &#x27;errors&#x27;: [], &#x27;data&#x27;: None}
+乐清市柳市跃驰轮胎商行
+{&#x27;code&#x27;: 200, &#x27;message&#x27;: &#x27;&#x27;, &#x27;errors&#x27;: [], &#x27;data&#x27;: {&#x27;total&#x27;: 1, &#x27;pages&#x27;: 1, &#x27;data&#x27;: [{&#x27;uid&#x27;: &#x27;ca51462e14a34c2ea32027e3377beac1&#x27;, &#x27;pripid&#x27;: &#x27;3303823090227938&#x27;, &#x27;orgEntityName&#x27;: &#x27;乐清市柳市跃驰轮胎商行&#x27;, &#x27;alias&#x27;: None, &#x27;unicode&#x27;: &#x27;92330382MA294TWH2H&#x27;, &#x27;regno&#x27;: &#x27;330382606344727&#x27;, &#x27;regState&#x27;: &#x27;1&#x27;, &#x27;regStateContent&#x27;: &#x27;存续&#x27;, &#x27;regStateCn&#x27;: &#x27;存续&#x27;, &#x27;leRep&#x27;: &#x27;周瑶&#x27;, &#x27;leRepTel&#x27;: &#x27;15088559292&#x27;, &#x27;manageType&#x27;: &#x27;1&#x27;, &#x27;manageCode&#x27;: &#x27;330782000000_113307820026096296&#x27;, &#x27;manageCodeContent&#x27;: &#x27;义乌市公安局&#x27;, &#x27;orgEntityMarketType&#x27;: &#x27;market_subject&#x27;, &#x27;orgEntityMarketTypeContent&#x27;: &#x27;市场主体&#x27;, &#x27;gridAreaCodeContent&#x27;: None, &#x27;xzAreaCodeContent&#x27;: None, &#x27;cityCodeContent&#x27;: &#x27;温州市&#x27;, &#x27;areaCodeContent&#x27;: &#x27;乐清市&#x27;, &#x27;townCodeContent&#x27;: None, &#x27;orgEntityCategory&#x27;: &#x27;92&#x27;, &#x27;regAddress&#x27;: &#x27;浙江省温州市乐清市柳市镇排岩头村&#x27;, &#x27;estDate&#x27;: &#x27;2017-03-30&#x27;, &#x27;opScope&#x27;: &#x27;轮胎批发兼零售。（依法须经批准的项目，经相关部门批准后方可开展经营活动）&#x27;, &#x27;regDeptCode&#x27;: &#x27;330382&#x27;, &#x27;regDeptCn&#x27;: &#x27;乐清市市场监督管理局&#x27;, &#x27;manageDept&#x27;: &#x27;&#x27;, &#x27;gridAreaCode&#x27;: None, &#x27;xzAreaCode&#x27;: &#x27;&#x27;, &#x27;cityCode&#x27;: &#x27;330300000000&#x27;, &#x27;areaCode&#x27;: &#x27;330382000000&#x27;, &#x27;townCode&#x27;: &#x27;&#x27;, &#x27;location&#x27;: &#x27;0.00000000000000,0.00000000000000&#x27;, &#x27;managePersonName&#x27;: None, &#x27;manageUserMarked&#x27;: None, &#x27;markInfoMarked&#x27;: &#x27;1&#x27;, &#x27;dataAttribute&#x27;: &#x27;2&#x27;, &#x27;dataAttributeContent&#x27;: None, &#x27;areaName&#x27;: &#x27;乐清市&#x27;, &#x27;cityName&#x27;: &#x27;温州市&#x27;, &#x27;townName&#x27;: None, &#x27;manageName&#x27;: &#x27;义乌市公安局&#x27;, &#x27;gridAreaName&#x27;: None, &#x27;distance&#x27;: None, &#x27;gridId&#x27;: None, &#x27;renRiskClass&#x27;: None, &#x27;renGenTime&#x27;: None}]}}
+<br/></div></td></tr></tbody></table></body></html>

@@ -180,7 +180,7 @@ def test_cs001_jgl(login_fix):
     manageCode = data_2['data']['data'][0]['manageCode']
     manageType = data_2['data']['data'][0]['manageType']
     data_assign = re.assign_org_entity(uid=uid_list,  manageCode=manageCode, manageType=manageType)
-    assert data_assign == "批量指派成功:1条,失败:0条"
+    assert data_assign["message"] == "批量指派成功:1条,失败:0条"
     # 移除
     data_del = re.del_org_entity(uid=uid_list)
     assert data_del == "批量移除成功:1条,失败:0条"

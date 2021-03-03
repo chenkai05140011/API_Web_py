@@ -4,8 +4,8 @@ import pytest
 import requests
 import json
 import allure
-from case.common_orgEntity import Org_Entity
-from case.common_Sys_Manage import Sys_Manage
+from api.common_orgEntity import Org_Entity
+from api.common_Sys_Manage import Sys_Manage
 
 #pytest --alluredir ./report/allure_raw 导出报告
 #allure serve report/allure_raw 运行allue服务
@@ -48,7 +48,7 @@ from case.common_Sys_Manage import Sys_Manage
 @pytest.mark.parametrize("test_input,expect", [("日用口罩", 200), ("清洁球", 200), (1, 200)])
 def test_sel_jgl(login_fix, test_input, expect):
     '''
-        用例描述：监管对象（机构类）查询接
+        用例描述：监管对象（机构类）查询接口
         :param login_fix:前置登入
         :return:
         '''
@@ -73,7 +73,7 @@ def test_sel1_jgl(login_fix, test_input_1, test_input_2):
     s = login_fix
     re = Org_Entity(s)
     # step1 执行查询
-    data = re.select_org_entity(test_input_1,test_input_2)
+    data = re.select_org_entity(test_input_1, test_input_2)
     assert data["code"] == 200
 
 @pytest.mark.api_test

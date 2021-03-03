@@ -1,7 +1,10 @@
 import allure
 from CONFIG.Define import LogLevel
-from COMMON import Log
 from CONFIG import Global
+from common.log import Logger
+
+
+logger = Logger(logger='BasePage').getlog()
 
 #case公共类和函数
 class LogIn():
@@ -12,7 +15,7 @@ class LogIn():
 
     @allure.step("行政执法系统登录")
     def login(self, name="15868385402",
-              password="AY1qyA+eyDFnxkplZIOBnkFpaLKr2kjgkQZ+l0wvHndMSxFtZJjpDxxNiMMXuzC7x0xj3J8lxCpPlnf+QK1eqM+lpaoIlL8r0keTZXsbfpAKl3Gtn+oZ38Iv7o1ROPjTxU8XNQOj+TkLgl8LWhoK/3Oj3FpyZlZE8+87PWnajZG5ua3U5zGQ2Eud8MRSu7Rb+mmXJ81WDM5za6Xft4WrLJXtIALeua8ZZTi6vv3/BUEi+7x3fIMMfDmGGUNI43P1//s11Rl4EFm4OiLnp0tiz3HbtjqiSewBN/hm36kY7yZNkLKWXXa20pFYA1wyEu65xzpgReX/AcCcOwSMMdAxNQ=="):
+              password="HE6EYw/5NqbZXPVtZxO5Pc8MeZ0r6DaOfYUoz/1yAl5R94EN5lefKKa8jNqpWD9i7Vb82w5iM5z/5XabcEPXNXL0brJ/4ioZo/MCMQN8451TuhUBcb164tRUKmlVi17ORQB/eulsuMX9fO733adaxC5bBrS+T1AZLcyGouBbw5zLa1RUmlBkaXBAP513IaI4pEbB7YiaEJwF5MP2ql4923JPwtJ8uLR4ADjCjgImQTZ5B3wTJv0oKZ5yFhUn0sBOz5oGSRS8YWFkgf2cPH00P0VgcAQFguhtX6L8ij3GLBuxSbb8FgOBPZf43Gdcm1EIb6kkB390+FDQibd/PMGjxQ=="):
         url = self.host + "/api/v2/auth/users/login?_allow_anonymous=true"
         data = {
             "loginName": name,
@@ -30,6 +33,7 @@ class LogIn():
             }
             # 更新 headers
             self.s.headers.update(headers)  # 更新到session会话
+            logger.info('get token %s' % token)
             return token
         else:
             print("登入失败，启动第二方案写死token（可能过期需要手动填写），失败原因：%s" % r.json())
@@ -40,7 +44,10 @@ class LogIn():
             }
             # 更新 headers
             self.s.headers.update(headers)  # 更新到session会话
+            logger.info('get token %s' % token)
             return token
+
+
 
 # if __name__ == '__main__':
 #     s = requests.session()# 会话  代码里面的浏览器，模拟浏览器的功能
